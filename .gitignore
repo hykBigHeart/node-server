@@ -1,0 +1,7 @@
+# Git 会忽略的文件
+
+node_modules
+
+# Use the PNPM
+package-lock.json
+yarn.lock
