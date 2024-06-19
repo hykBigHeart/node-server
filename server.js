@@ -1,28 +1,39 @@
 const express = require('express');
-const helmet = require('helmet');
+const mysql = require('mysql2');
+const path = require('path');
+
 const app = express();
 const port = 5000;
 
-const path = require('path');
+// 创建 MySQL 连接
+const connection = mysql.createConnection({
+  // 为什么昨天用的3306还可以，今天用3306一直报错
+  host: 'localhost',
+  user: 'root',
+  password: '',
+  database: 'my_database',
+  multipleStatements: true  // 启用多语句查询
+});
+// 连接到数据库
+connection.connect(error => {
+  if (error) {
+    console.error('Error connecting to the database:', error);
+    return;
+  }
+  console.log('Connected to the MySQL database.');
+});
+
 
 // 解析请求体中的 JSON 数据
 app.use(express.json());
-
-// 使用 Helmet 设置 CSP
-app.use(helmet.contentSecurityPolicy({
-  directives: {
-    // defaultSrc: ["'self'"],
-    // scriptSrc: ["'self'", "'unsafe-inline'"], // 允许内联脚本（不推荐，实际使用中应尽量避免）
-    // frameSrc: ["'self'", "http://192.168.1.109:5000"], // 允许嵌入特定的来源
-  },
-}));
 
 // 专门处理 favicon.ico 请求
 // app.get('/favicon.ico', (req, res) => res.status(204));
 
 app.use((request, response, next)=> {
-  clearConsole()
+  // clearConsole()
   console.log(request.url);
+  // console.log('request.query', request.query, 'request.params', request.params, 'request.body', request.body);
   console.log('有人请求了服务器！！！');
   next()
 })
@@ -63,6 +74,97 @@ app.get('/persons', (req, res) => {
   }
   res.send(arr);
 });
+
+
+app.get('/login/code', (req, res) => {
+  const arr = {
+    code: 0,
+    data: 'http://dummyimage.com/100x40/dcdfe6/000000.png&text=V3Admin',
+    message: '获取验证码成功'
+  }
+  res.send(arr);
+});
+
+app.post('/users/login', (req, res) => {
+  const obj = {
+    code: 0,
+    data: {token: "token-admin"},
+    message: '登录成功'
+  }
+  res.send(obj);
+});
+
+app.get('/users/info', (req, res) => {
+    const obj = {
+      code: 0,
+      data: { username: "admin", roles: ["admin"] },
+      message: '获取用户详情成功'
+    }
+    res.send(obj);
+  });
+
+
+// 查询
+app.get('/users', (req, res) => {
+  const querySql = `
+    SELECT * FROM users;
+    SELECT COUNT(*) as total FROM users;
+  `;
+  connection.query(querySql, (error, results) => {
+    if (error) {
+      res.status(500).send('Error querying the database');
+      return;
+    }
+    // console.log('results', results);
+    const obj = {
+      code: 0,
+      data: {
+        list: results[0],
+        total: results[1][0].total
+      },
+      message: '获取用户列表成功'
+    }
+    res.json(obj);
+  });
+});
+
+// 增
+app.post('/user', (req, res) => {
+  const { username, password } = req.body
+  let addSql = `INSERT INTO users(id, username, email, age) VALUES(0, ?, ?, ?)`
+  let addSqlParams = [username, password, 18];
+  connection.query(addSql, addSqlParams, (error, results) => {
+    if (error) {
+      res.status(500).send('Error querying the database');
+      return;
+    }
+    const obj = {
+      code: 0,
+      data: {},
+      message: '新增成功'
+    }
+    res.json(obj);
+  });
+});
+
+// 删
+app.delete('/user/:id', (req, res) => {
+  console.log('res.query', req.query, 'req.params', req.params, 'req.body', req.body);
+  let delSql = `DELETE FROM users where id=${req.params.id}`
+  connection.query(delSql, (error, results) => {
+    if (error) {
+      res.status(500).send('Error querying the database');
+      return;
+    }
+    const obj = {
+      code: 0,
+      data: {},
+      message: '删除成功'
+    }
+    res.json(obj);
+  });
+});
+
 
 // 处理 POST 请求
 app.post('/post', (req, res) => {
