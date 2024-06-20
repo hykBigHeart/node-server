@@ -33,7 +33,7 @@ app.use(express.json());
 app.use((request, response, next)=> {
   // clearConsole()
   console.log(request.url);
-  // console.log('request.query', request.query, 'request.params', request.params, 'request.body', request.body);
+  console.log('request.query', request.query, 'request.params', request.params, 'request.body', request.body);
   console.log('有人请求了服务器！！！');
   next()
 })
@@ -106,16 +106,28 @@ app.get('/users/info', (req, res) => {
 
 // 查询
 app.get('/users', (req, res) => {
-  const querySql = `
-    SELECT * FROM users;
-    SELECT COUNT(*) as total FROM users;
+  // const querySql = `
+  //   SELECT * FROM users;
+  //   SELECT COUNT(*) as total FROM users;
+  // `;
+
+  const page = parseInt(req.query.currentPage) || 1;
+  const pageSize = parseInt(req.query.pageSize) || 10;
+  const username = req.query.username || '';
+  const offset = (page - 1) * pageSize;
+
+  let querySql = `
+    SELECT * FROM users WHERE username LIKE ? LIMIT ? OFFSET ?;
+    SELECT COUNT(*) as total FROM users WHERE username LIKE ?;
   `;
-  connection.query(querySql, (error, results) => {
+
+  const searchValue = `%${username}%`;
+
+  connection.query(querySql, [searchValue, pageSize, offset, searchValue], (error, results) => {
     if (error) {
       res.status(500).send('Error querying the database');
       return;
     }
-    // console.log('results', results);
     const obj = {
       code: 0,
       data: {
@@ -131,7 +143,21 @@ app.get('/users', (req, res) => {
 // 增
 app.post('/user', (req, res) => {
   const { username, password } = req.body
-  let addSql = `INSERT INTO users(id, username, email, age) VALUES(0, ?, ?, ?)`
+
+  // let addSql = `INSERT INTO users(id, username, email, age) VALUES(0, ?, ?, ?)`
+
+  // 新增的id为当前顺延当前id值最大的 + 1
+  const addSql = `
+    SET @next_id := (
+      SELECT MIN(t1.id + 1)
+      FROM users t1
+      LEFT JOIN users t2 ON t1.id + 1 = t2.id
+      WHERE t2.id IS NULL
+    );
+    SET @next_id := IFNULL(@next_id, 1);
+    INSERT INTO users (id, username, email, age) VALUES (@next_id, ?, ?, ?);
+  `;
+
   let addSqlParams = [username, password, 18];
   connection.query(addSql, addSqlParams, (error, results) => {
     if (error) {
@@ -147,10 +173,10 @@ app.post('/user', (req, res) => {
   });
 });
 
-// 删
+// 单删
 app.delete('/user/:id', (req, res) => {
   console.log('res.query', req.query, 'req.params', req.params, 'req.body', req.body);
-  let delSql = `DELETE FROM users where id=${req.params.id}`
+  let delSql = `DELETE FROM users WHERE id=${req.params.id}`
   connection.query(delSql, (error, results) => {
     if (error) {
       res.status(500).send('Error querying the database');
@@ -160,6 +186,43 @@ app.delete('/user/:id', (req, res) => {
       code: 0,
       data: {},
       message: '删除成功'
+    }
+    res.json(obj);
+  });
+});
+
+//  批量删
+app.delete('/users', (req, res) => {
+  // console.log('res.query', req.query, 'req.params', req.params, 'req.body', req.body);
+  let delSql = `DELETE FROM users WHERE id IN (${req.body.ids.join()})`
+  connection.query(delSql, (error, results) => {
+    if (error) {
+      res.status(500).send('Error querying the database');
+      return;
+    }
+    const obj = {
+      code: 0,
+      data: {},
+      message: '删除成功'
+    }
+    res.json(obj);
+  });
+});
+
+// 改
+app.put('/user', (req, res) => {
+  const { username, password, id } = req.body
+  let editSql = `UPDATE users SET username = ? WHERE id = ?`
+  let editSqlParams = [username, id];
+  connection.query(editSql, editSqlParams, (error, results) => {
+    if (error) {
+      res.status(500).send('Error querying the database');
+      return;
+    }
+    const obj = {
+      code: 0,
+      data: {},
+      message: '新增成功'
     }
     res.json(obj);
   });
