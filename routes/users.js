@@ -1,26 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const mysql = require('mysql2');
 const path = require('path');
 const multer = require('multer');
-
-// 创建 MySQL 连接
-const connection = mysql.createConnection({
-  // 为什么昨天用的3306还可以，今天用3306一直报错
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  multipleStatements: true  // 启用多语句查询
-});
-// 连接到数据库
-connection.connect(error => {
-  if (error) {
-    console.error('Error connecting to the database:', error);
-    return;
-  }
-  console.log('Connected to the MySQL database.');
-});
+const connection = require('../db');
 
 // 设置上传路径和文件名
 const storage = multer.diskStorage({
