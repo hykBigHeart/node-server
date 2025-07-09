@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const mysql = require('mysql2');
+const path = require('path');
+const multer = require('multer');
 
 // 创建 MySQL 连接
 const connection = mysql.createConnection({
@@ -19,6 +21,20 @@ connection.connect(error => {
   }
   console.log('Connected to the MySQL database.');
 });
+
+// 设置上传路径和文件名
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads'); // 上传目录（确保存在）
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = Date.now() + '-' + Math.round(Math.random() * 1e9) + ext;
+    cb(null, filename);
+  }
+});
+
+const upload = multer({ storage });
 
 // 查询
 router.get('/users', (req, res) => {
@@ -58,7 +74,7 @@ router.get('/users', (req, res) => {
 
 // 增
 router.post('/user', (req, res) => {
-  const { username, password } = req.body
+  const { username, password, imageUrl } = req.body
 
   // let addSql = `INSERT INTO users(id, username, email, age) VALUES(0, ?, ?, ?)`
 
@@ -71,13 +87,13 @@ router.post('/user', (req, res) => {
       WHERE t2.id IS NULL
     );
     SET @next_id := IFNULL(@next_id, 1);
-    INSERT INTO users (id, username, email, age) VALUES (@next_id, ?, ?, ?);
+    INSERT INTO users (id, username, password, email, age, imageUrl) VALUES (@next_id, ?, ?, ?, ?, ?);
   `;
 
-  let addSqlParams = [username, password, 18];
+  let addSqlParams = [username, password, 'email@email.com', 18, imageUrl];
   connection.query(addSql, addSqlParams, (error, results) => {
     if (error) {
-      res.status(500).send('Error querying the database');
+      res.status(500).send(error);
       return;
     }
     const obj = {
@@ -86,6 +102,18 @@ router.post('/user', (req, res) => {
       message: '新增成功'
     }
     res.json(obj);
+  });
+});
+
+// 上传接口
+router.post('/upload', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ code: 1, message: '没有文件上传' });
+  }
+  res.json({
+    code: 0,
+    message: '上传成功',
+    url: `http://localhost:5000/uploads/${req.file.filename}`
   });
 });
 

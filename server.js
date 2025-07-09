@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
@@ -22,6 +23,11 @@ app.use((request, response, next)=> {
 
 // 设置静态资源路径，将 public 文件夹作为静态资源提供给客户端
 app.use(express.static(path.join(__dirname, 'public')));
+
+// 居然还必须在引入注册才能生效呢
+app.use(cors()); // 允许跨域
+// 静态访问上传目录
+app.use('/uploads', express.static('uploads'));
 
 app.get('/', (req, res) => {
   // res.send('Hello, World!');
