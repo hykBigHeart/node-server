@@ -1,7 +1,36 @@
 const express = require("express");
 const router = express.Router();
-// 登录初始化接口
+const bcrypt = require('bcrypt');
+const connection = require('../db');
 
+// 注册
+router.post('/user/register', async (req, res) => {
+  const rawPassword = req.body.password;
+  // 加密：hash(原始密码, 盐的轮数)
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(rawPassword, saltRounds);
+
+  // 存到数据库
+  connection.query(
+    'INSERT INTO users (username, password) VALUES (?, ?)',
+    [req.body.username, hashedPassword],
+    (error, results) => {
+      if (error) {
+        res.status(500).send(error);
+        return;
+      }
+
+      const obj = {
+        code: 0,
+        data: null,
+        message: '注册成功'
+      }
+      res.send(obj);
+    }
+  )
+});
+
+// 登录初始化接口
 router.get('/login/code', (req, res) => {
   const arr = {
     code: 0,
