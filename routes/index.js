@@ -40,13 +40,28 @@ router.get('/login/code', (req, res) => {
   res.send(arr);
 });
 
-router.post('/users/login', (req, res) => {
-  const obj = {
-    code: 0,
-    data: {token: "token-admin"},
-    message: '登录成功'
-  }
-  res.send(obj);
+router.post('/users/login', (req, res1) => {
+const inputPassword = req.body.password;
+  connection.query(
+    'SELECT * FROM users WHERE username = ?',
+    [req.body.username],
+    async(error, res) => {
+      if (error) {
+        res1.status(500).send(error);
+        return;
+      }
+      if (!res.length) {
+        return res1.status(200).send({ code: 1, data: null, message: '用户不存在' });
+      } else {
+        let user = res[0]
+        const match = await bcrypt.compare(inputPassword, user.password);
+        if (match) {
+          res1.send({ code: 0, data: {token: "token-admin"}, message: '登录成功' });
+        } else res1.status(200).send({code: 1});
+      }
+      
+    }
+  );
 });
 
 router.get('/users/info', (req, res) => {
