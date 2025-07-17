@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const { authMiddleware } = require('./utils')
 const app = express();
 const port = 5000;
 
@@ -41,7 +42,7 @@ const usersRouter = require('./routes/users');
 
 // 使用路由模块 这里定义的路径前端也需要拼接上
 app.use('/', indexRouter);
-app.use('/', usersRouter);
+app.use('/secure', authMiddleware, usersRouter);
 
 app.listen(port, (err) => {
   if (!err) console.log(`Server is running on port ${port}`); //  http://localhost:5000

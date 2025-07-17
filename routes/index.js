@@ -1,7 +1,9 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 const connection = require('../db');
+const SECRET_KEY = 'my-secret-key'; // 加密用的密钥
 
 // 注册
 router.post('/user/register', async (req, res) => {
@@ -56,7 +58,11 @@ const inputPassword = req.body.password;
         let user = res[0]
         const match = await bcrypt.compare(inputPassword, user.password);
         if (match) {
-          res1.send({ code: 0, data: {token: "token-admin"}, message: '登录成功' });
+          // 登录成功，生成 token
+          const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, {
+            expiresIn: '2h'
+          });
+          res1.send({ code: 0, data: { token }, message: '登录成功' });
         } else res1.status(200).send({code: 1});
       }
       
